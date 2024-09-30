@@ -30,7 +30,6 @@ table_engine_list = [
 
 # 示例图片路径
 example_images = [
-    "images/lineless1.png",
     "images/wired1.png",
     "images/lineless2.png",
     "images/wired2.png",
