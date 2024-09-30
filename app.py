@@ -124,30 +124,36 @@ def main():
     det_models_labels = list(det_model_dir.keys())
     rec_models_labels = list(rec_model_dir.keys())
 
-    with gr.Blocks() as demo:
+    with gr.Blocks(css="""
+        .scrollable-container {
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+    """) as demo:
         with gr.Row():  # 两列布局
-            with gr.Column(variant="panel"):  # 左边列
-                img_input = gr.Image(label="Upload or Select Image",  sources="upload")
+            with gr.Tab("Options"):
+                with gr.Column(variant="panel", scale=1):  # 侧边栏，宽度比例为1
+                    img_input = gr.Image(label="Upload or Select Image",  sources="upload", value="images/lineless3.jpg")
 
-                # 示例图片选择器
-                examples = gr.Examples(
-                    examples=example_images,
-                    inputs=img_input,
-                    fn=lambda x: x,  # 简单返回图片路径
-                    outputs=img_input,
-                    cache_examples=True
-                )
+                    # 示例图片选择器
+                    examples = gr.Examples(
+                        examples=example_images,
+                        inputs=img_input,
+                        fn=lambda x: x,  # 简单返回图片路径
+                        outputs=img_input,
+                        cache_examples=True
+                    )
 
-                table_engine_type = gr.Dropdown(table_engine_list, label="Select Table Recognition Engine",
-                                                value=table_engine_list[0])
-                det_model = gr.Dropdown(det_models_labels, label="Select OCR Detection Model",
-                                        value=det_models_labels[0])
-                rec_model = gr.Dropdown(rec_models_labels, label="Select OCR Recognition Model",
-                                        value=rec_models_labels[0])
+                    table_engine_type = gr.Dropdown(table_engine_list, label="Select Recognition Table Engine",
+                                                    value=table_engine_list[0])
+                    det_model = gr.Dropdown(det_models_labels, label="Select OCR Detection Model",
+                                            value=det_models_labels[0])
+                    rec_model = gr.Dropdown(rec_models_labels, label="Select OCR Recognition Model",
+                                            value=rec_models_labels[0])
 
-                run_button = gr.Button("Run")
-                gr.Markdown("# Elapsed Time")
-                elapse_text = gr.Text(label="")  # 使用 `gr.Text` 组件展示字符串
+                    run_button = gr.Button("Run")
+                    gr.Markdown("# Elapsed Time")
+                    elapse_text = gr.Text(label="")  # 使用 `gr.Text` 组件展示字符串
             with gr.Column(scale=2):  # 右边列
                 # 使用 Markdown 标题分隔各个组件
                 gr.Markdown("# Html Render")
