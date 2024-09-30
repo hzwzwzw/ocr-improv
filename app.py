@@ -67,29 +67,28 @@ def select_ocr_model(det_model, rec_model):
 
 def select_table_model(img, table_engine_type, det_model, rec_model):
     if table_engine_type == "rapid_table":
-        return rapid_table_engine, 0
+        return rapid_table_engine, table_engine_type
     elif table_engine_type == "wired_table_v1":
-        return wired_table_engine_v1, 0
+        return wired_table_engine_v1, table_engine_type
     elif table_engine_type == "wired_table_v2":
         print("使用v2 wired table")
-        return wired_table_engine_v2, 0
+        return wired_table_engine_v2, table_engine_type
     elif table_engine_type == "lineless_table":
-        return lineless_table_engine, 0
+        return lineless_table_engine, table_engine_type
     elif table_engine_type == "pp_table":
         return pp_engine_dict[f"{det_model}_{rec_model}"], 0
     elif table_engine_type == "auto":
         cls, elasp = table_cls(img)
         if cls == 'wired':
             table_engine = wired_table_engine_v2
-        else:
-            table_engine = lineless_table_engine
-        return table_engine, elasp
+            return table_engine, "wired_table_v2"
+        return lineless_table_engine, "lineless_table"
 
 
 def process_image(img, table_engine_type, det_model, rec_model):
     img = img_loader(img)
     start = time.time()
-    table_engine, select_elapse = select_table_model(img, table_engine_type, det_model, rec_model)
+    table_engine, talbe_type = select_table_model(img, table_engine_type, det_model, rec_model)
     ocr_engine = select_ocr_model(det_model, rec_model)
 
     if isinstance(table_engine, PPStructure):
@@ -106,11 +105,12 @@ def process_image(img, table_engine_type, det_model, rec_model):
 
         if isinstance(table_engine, RapidTable):
             html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
+            polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
         elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
             html, table_rec_elapse, polygons, _, _ = table_engine(img, ocr_result=ocr_res)
 
         sum_elapse = time.time() - start
-        all_elapse = f"- table all cost: {sum_elapse:.5f}\n - table rec cost: {table_rec_elapse:.5f}\n - ocr cost: {det_cost + cls_cost + rec_cost:.5f}"
+        all_elapse = f"- table_type: {talbe_type}\n table all cost: {sum_elapse:.5f}\n - table rec cost: {table_rec_elapse:.5f}\n - ocr cost: {det_cost + cls_cost + rec_cost:.5f}"
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     table_boxes_img = plot_rec_box(img.copy(), polygons)
@@ -126,7 +126,7 @@ def main():
 
     with gr.Blocks() as demo:
         with gr.Row():  # 两列布局
-            with gr.Column():  # 左边列
+            with gr.Column(variant="panel"):  # 左边列
                 img_input = gr.Image(label="Upload or Select Image",  sources="upload")
 
                 # 示例图片选择器
@@ -148,7 +148,7 @@ def main():
                 run_button = gr.Button("Run")
                 gr.Markdown("# Elapsed Time")
                 elapse_text = gr.Text(label="")  # 使用 `gr.Text` 组件展示字符串
-            with gr.Column():  # 右边列
+            with gr.Column(scale=2):  # 右边列
                 # 使用 Markdown 标题分隔各个组件
                 gr.Markdown("# Html Render")
                 html_output = gr.HTML(label="", elem_classes="scrollable-container")
