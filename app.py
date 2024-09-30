@@ -14,12 +14,10 @@ img_loader = LoadImage()
 table_rec_path = "models/table_rec/ch_ppstructure_mobile_v2_SLANet.onnx"
 det_model_dir = {
     "mobile_det": "models/ocr/ch_PP-OCRv4_det_infer.onnx",
-    "server_det": "models/ocr/ch_PP-OCRv4_det_server_infer.onnx"
 }
 
 rec_model_dir = {
     "mobile_rec": "models/ocr/ch_PP-OCRv4_rec_infer.onnx",
-    "server_rec": "models/ocr/ch_PP-OCRv4_rec_server_infer.onnx"
 }
 table_engine_list = [
     "auto",
