@@ -30,12 +30,15 @@ table_engine_list = [
 
 # 示例图片路径
 example_images = [
-    "images/lineless1.png",
     "images/wired1.png",
-    "images/lineless2.png",
     "images/wired2.png",
-    "images/lineless3.jpg",
     "images/wired3.png",
+    "images/lineless1.png",
+    "images/wired4.jpg",
+    "images/lineless2.png",
+    "images/wired5.jpg",
+    "images/lineless3.jpg",
+    "images/wired6.jpg",
 ]
 rapid_table_engine = RapidTable(model_path=table_rec_path)
 wired_table_engine_v1 = WiredTableRecognition(version="v1")
