@@ -6,11 +6,10 @@ from lineless_table_rec import LinelessTableRecognition
 from paddleocr import PPStructure
 from rapid_table import RapidTable
 from rapidocr_onnxruntime import RapidOCR
+from slanet_plus_table import SLANetPlus
 from table_cls import TableCls
 from wired_table_rec import WiredTableRecognition
 
-from paddleXtablePlus import SLANetPlus
-# from paddleXtablePlus import SLANetPlus
 from utils import plot_rec_box, LoadImage, format_html, box_4_2_poly_to_box_4_1
 
 img_loader = LoadImage()
@@ -48,7 +47,7 @@ rapid_table_engine = RapidTable(model_path=table_rec_path)
 wired_table_engine_v1 = WiredTableRecognition(version="v1")
 wired_table_engine_v2 = WiredTableRecognition(version="v2")
 lineless_table_engine = LinelessTableRecognition()
-SLANet_plus_table_Engine = SLANetPlus(model_dir='models/table_rec/SLANet_plus')
+SLANet_plus_table_Engine = SLANetPlus()
 table_cls = TableCls()
 ocr_engine_dict = {}
 pp_engine_dict = {}
