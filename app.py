@@ -8,6 +8,9 @@ from rapid_table import RapidTable
 from rapidocr_onnxruntime import RapidOCR
 from table_cls import TableCls
 from wired_table_rec import WiredTableRecognition
+
+from paddleXtablePlus import SLANetPlus
+# from paddleXtablePlus import SLANetPlus
 from utils import plot_rec_box, LoadImage, format_html, box_4_2_poly_to_box_4_1
 
 img_loader = LoadImage()
@@ -22,6 +25,7 @@ rec_model_dir = {
 table_engine_list = [
     "auto",
     "rapid_table",
+    "paddlex_SLANet_plus",
     "wired_table_v2",
     "pp_table",
     "wired_table_v1",
@@ -44,6 +48,7 @@ rapid_table_engine = RapidTable(model_path=table_rec_path)
 wired_table_engine_v1 = WiredTableRecognition(version="v1")
 wired_table_engine_v2 = WiredTableRecognition(version="v2")
 lineless_table_engine = LinelessTableRecognition()
+SLANet_plus_table_Engine = SLANetPlus(model_dir='models/table_rec/SLANet_plus')
 table_cls = TableCls()
 ocr_engine_dict = {}
 pp_engine_dict = {}
@@ -71,6 +76,8 @@ def select_ocr_model(det_model, rec_model):
 def select_table_model(img, table_engine_type, det_model, rec_model):
     if table_engine_type == "rapid_table":
         return rapid_table_engine, table_engine_type
+    elif table_engine_type == "paddlex_SLANet_plus":
+        return SLANet_plus_table_Engine, table_engine_type
     elif table_engine_type == "wired_table_v1":
         return wired_table_engine_v1, table_engine_type
     elif table_engine_type == "wired_table_v2":
@@ -106,7 +113,7 @@ def process_image(img, table_engine_type, det_model, rec_model):
         det_cost, cls_cost, rec_cost = ocr_infer_elapse
         ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
 
-        if isinstance(table_engine, RapidTable):
+        if isinstance(table_engine, (RapidTable, SLANetPlus)):
             html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
             polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
         elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
