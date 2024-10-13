@@ -24,8 +24,8 @@ rec_model_dir = {
 }
 table_engine_list = [
     "auto",
-    "rapid_table",
-    "paddlex_SLANet_plus",
+    "RapidTable(SLANet)",
+    "RapidTable(SLANet-plus)",
     "wired_table_v2",
     "pp_table",
     "wired_table_v1",
@@ -74,9 +74,9 @@ def select_ocr_model(det_model, rec_model):
 
 
 def select_table_model(img, table_engine_type, det_model, rec_model):
-    if table_engine_type == "rapid_table":
+    if table_engine_type == "RapidTable(SLANet)":
         return rapid_table_engine, table_engine_type
-    elif table_engine_type == "paddlex_SLANet_plus":
+    elif table_engine_type == "RapidTable(SLANet-plus)":
         return SLANet_plus_table_Engine, table_engine_type
     elif table_engine_type == "wired_table_v1":
         return wired_table_engine_v1, table_engine_type
