@@ -1,3 +1,4 @@
+import threading
 import time
 
 import cv2
@@ -11,7 +12,7 @@ from table_cls import TableCls
 from wired_table_rec import WiredTableRecognition
 
 from utils import plot_rec_box, LoadImage, format_html, box_4_2_poly_to_box_4_1
-
+lock = threading.Lock()
 img_loader = LoadImage()
 table_rec_path = "models/table_rec/ch_ppstructure_mobile_v2_SLANet.onnx"
 det_model_dir = {
@@ -112,8 +113,12 @@ def process_image(img, table_engine_type, det_model, rec_model):
         det_cost, cls_cost, rec_cost = ocr_infer_elapse
         ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
 
-        if isinstance(table_engine, (RapidTable, SLANetPlus)):
+        if isinstance(table_engine, RapidTable):
             html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
+            polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
+        elif isinstance(table_engine, SLANetPlus):
+            with lock:
+                html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
             polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
         elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
             html, table_rec_elapse, polygons, _, _ = table_engine(img, ocr_result=ocr_res)
