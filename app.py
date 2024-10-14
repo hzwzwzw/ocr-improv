@@ -12,7 +12,6 @@ from table_cls import TableCls
 from wired_table_rec import WiredTableRecognition
 
 from utils import plot_rec_box, LoadImage, format_html, box_4_2_poly_to_box_4_1
-lock = threading.Lock()
 img_loader = LoadImage()
 table_rec_path = "models/table_rec/ch_ppstructure_mobile_v2_SLANet.onnx"
 det_model_dir = {
@@ -117,7 +116,11 @@ def process_image(img, table_engine_type, det_model, rec_model):
             html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
             polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
         elif isinstance(table_engine, SLANetPlus):
-            with lock:
+            try:
+                html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
+            except Exception as e:
+                global SLANet_plus_table_Engine
+                SLANet_plus_table_Engine = SLANetPlus()
                 html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
             polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
         elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
