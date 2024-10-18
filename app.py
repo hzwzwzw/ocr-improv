@@ -44,10 +44,10 @@ example_images = [
     "images/wired6.jpg",
 ]
 rapid_table_engine = RapidTable(model_path=table_rec_path)
+SLANet_plus_table_Engine = RapidTable()
 wired_table_engine_v1 = WiredTableRecognition(version="v1")
 wired_table_engine_v2 = WiredTableRecognition(version="v2")
 lineless_table_engine = LinelessTableRecognition()
-SLANet_plus_table_Engine = SLANetPlus()
 table_cls = TableCls()
 ocr_engine_dict = {}
 pp_engine_dict = {}
@@ -111,17 +111,8 @@ def process_image(img, table_engine_type, det_model, rec_model):
         ocr_res, ocr_infer_elapse = ocr_engine(img)
         det_cost, cls_cost, rec_cost = ocr_infer_elapse
         ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
-
         if isinstance(table_engine, RapidTable):
             html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
-            polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
-        elif isinstance(table_engine, SLANetPlus):
-            try:
-                html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
-            except Exception as e:
-                global SLANet_plus_table_Engine
-                SLANet_plus_table_Engine = SLANetPlus()
-                html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
             polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
         elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
             html, table_rec_elapse, polygons, _, _ = table_engine(img, ocr_result=ocr_res)
