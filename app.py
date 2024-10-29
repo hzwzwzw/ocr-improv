@@ -1,4 +1,3 @@
-import threading
 import time
 
 import cv2
@@ -7,7 +6,6 @@ from lineless_table_rec import LinelessTableRecognition
 from paddleocr import PPStructure
 from rapid_table import RapidTable
 from rapidocr_onnxruntime import RapidOCR
-from slanet_plus_table import SLANetPlus
 from table_cls import TableCls
 from wired_table_rec import WiredTableRecognition
 
@@ -40,8 +38,9 @@ example_images = [
     "images/wired4.jpg",
     "images/lineless2.png",
     "images/wired5.jpg",
-    "images/lineless3.jpg",
-    "images/wired6.jpg",
+    "images/lineless4.jpg",
+    "images/wired7.jpg",
+    "images/wired9.jpg",
 ]
 rapid_table_engine = RapidTable(model_path=table_rec_path)
 SLANet_plus_table_Engine = RapidTable()
@@ -146,10 +145,11 @@ def main():
                     # 示例图片选择器
                     examples = gr.Examples(
                         examples=example_images,
+                        examples_per_page=len(example_images),
                         inputs=img_input,
                         fn=lambda x: x,  # 简单返回图片路径
                         outputs=img_input,
-                        cache_examples=True
+                        cache_examples=False
                     )
 
                     table_engine_type = gr.Dropdown(table_engine_list, label="Select Recognition Table Engine",
