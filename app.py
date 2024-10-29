@@ -47,7 +47,7 @@ SLANet_plus_table_Engine = RapidTable()
 wired_table_engine_v1 = WiredTableRecognition(version="v1")
 wired_table_engine_v2 = WiredTableRecognition(version="v2")
 lineless_table_engine = LinelessTableRecognition()
-table_cls = TableCls()
+table_cls = TableCls(model_type="q")
 ocr_engine_dict = {}
 pp_engine_dict = {}
 for det_model in det_model_dir.keys():
