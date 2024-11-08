@@ -10,6 +10,7 @@ from table_cls import TableCls
 from wired_table_rec import WiredTableRecognition
 
 from utils import plot_rec_box, LoadImage, format_html, box_4_2_poly_to_box_4_1
+
 img_loader = LoadImage()
 table_rec_path = "models/table_rec/ch_ppstructure_mobile_v2_SLANet.onnx"
 det_model_dir = {
@@ -136,11 +137,34 @@ def main():
             overflow-x: auto;
             white-space: nowrap;
         }
+        .header-links {
+            text-align: center;
+        }
+        .header-links a {
+            display: inline-block;
+            text-align: center;
+            margin-right: 10px;  /* 调整间距 */
+        }
     """) as demo:
+        gr.HTML(
+            "<h1 style='text-align: center;'><a href='https://github.com/RapidAI/TableStructureRec?tab=readme-ov-file'>TableStructureRec</a></h1>"
+        )
+        gr.HTML('''
+                                        <div class="header-links">
+                                          <a href=""><img src="https://img.shields.io/badge/Python->=3.6,<3.12-aff.svg"></a>
+                                          <a href=""><img src="https://img.shields.io/badge/OS-Linux%2C%20Mac%2C%20Win-pink.svg"></a>
+                                          <a href="https://pypi.org/project/lineless-table-rec/"><img alt="PyPI" src="https://img.shields.io/pypi/v/lineless-table-rec"></a>
+                                          <a href="https://pepy.tech/project/lineless-table-rec"><img src="https://static.pepy.tech/personalized-badge/lineless-table-rec?period=total&units=abbreviation&left_color=grey&right_color=blue&left_text=Downloads%20Lineless"></a>
+                                          <a href="https://pepy.tech/project/wired-table-rec"><img src="https://static.pepy.tech/personalized-badge/wired-table-rec?period=total&units=abbreviation&left_color=grey&right_color=blue&left_text=Downloads%20Wired"></a>
+                                          <a href="https://semver.org/"><img alt="SemVer2.0" src="https://img.shields.io/badge/SemVer-2.0-brightgreen"></a>
+                                          <a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+                                          <a href="https://github.com/RapidAI/TableStructureRec/blob/c41bbd23898cb27a957ed962b0ffee3c74dfeff1/LICENSE"><img alt="GitHub" src="https://img.shields.io/badge/license-Apache 2.0-blue"></a>
+                                        </div>
+                                        ''')
         with gr.Row():  # 两列布局
             with gr.Tab("Options"):
                 with gr.Column(variant="panel", scale=1):  # 侧边栏，宽度比例为1
-                    img_input = gr.Image(label="Upload or Select Image",  sources="upload", value="images/lineless3.jpg")
+                    img_input = gr.Image(label="Upload or Select Image", sources="upload", value="images/lineless3.jpg")
 
                     # 示例图片选择器
                     examples = gr.Examples(
