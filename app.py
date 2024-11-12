@@ -219,15 +219,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-html, elasp, polygons, logic_points, ocr_res = table_engine(
-    img,
-    morph_close=True,  # 是否进行形态学操作,辅助找到更多线框,默认为True
-    more_h_lines=True,  # 是否基于线框检测结果进行更多水平线检查，辅助找到更小线框, 默认为True
-    h_lines_threshold=100,  # 必须开启more_h_lines, 连接横线检测像素阈值，小于该值会生成新横线，默认为100
-    more_v_lines=True,  # 是否基于线框检测结果进行更多垂直线检查，辅助找到更小线框, 默认为True
-    v_lines_threshold=15,  # 必须开启more_v_lines, 连接竖线检测像素阈值，小于该值会生成新竖线，默认为15
-    extend_line=True,  # 是否基于线框检测结果进行线段延长，辅助找到更多线框, 默认为True
-    need_ocr=True,  # 是否进行OCR识别, 默认为True
-    rec_again=True,  # 是否针对未识别到文字的表格框,进行单独截取再识别,默认为True
-)
