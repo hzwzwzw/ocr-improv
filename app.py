@@ -116,13 +116,7 @@ def process_image(img, table_engine_type, det_model, rec_model, small_box_cut_en
             polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
         elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
             html, table_rec_elapse, polygons, _, _ = table_engine(img, ocr_result=ocr_res)
-            if not small_box_cut_enhance:
-                html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(
-                    img, ocr_result=ocr_res,
-                    morph_close=False, more_h_lines=False, more_v_lines=False, extend_line=False
-                )
-            else:
-                html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(
+            html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(
                     img, ocr_result=ocr_res
                 )
 
@@ -187,10 +181,7 @@ def main():
 
                     table_engine_type = gr.Dropdown(table_engine_list, label="Select Recognition Table Engine",
                                                     value=table_engine_list[0])
-                    small_box_cut_enhance = gr.Checkbox(
-                        label="识别框切割增强(关闭避免多余切割，开启减少漏切割)",
-                        value=True
-                    )
+                    
                     det_model = gr.Dropdown(det_models_labels, label="Select OCR Detection Model",
                                             value=det_models_labels[0])
                     rec_model = gr.Dropdown(rec_models_labels, label="Select OCR Recognition Model",
