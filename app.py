@@ -201,7 +201,7 @@ def main():
 
         run_button.click(
             fn=process_image,
-            inputs=[img_input, table_engine_type, det_model, rec_model, small_box_cut_enhance],
+            inputs=[img_input, table_engine_type, det_model, rec_model],
             outputs=[html_output, table_boxes_output, ocr_boxes_output, elapse_text]
         )
 
