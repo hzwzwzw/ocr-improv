@@ -94,7 +94,7 @@ def select_table_model(img, table_engine_type, det_model, rec_model):
         return lineless_table_engine, "lineless_table"
 
 
-def process_image(img, table_engine_type, det_model, rec_model):
+def process_image(img, table_engine_type, det_model, rec_model, small_box_cut_enhance):
     img = img_loader(img)
     start = time.time()
     table_engine, talbe_type = select_table_model(img, table_engine_type, det_model, rec_model)
@@ -116,6 +116,15 @@ def process_image(img, table_engine_type, det_model, rec_model):
             polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
         elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
             html, table_rec_elapse, polygons, _, _ = table_engine(img, ocr_result=ocr_res)
+            if not small_box_cut_enhance:
+                html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(
+                    img, ocr_result=ocr_res,
+                    morph_close=False, more_h_lines=False, more_v_lines=False, extend_line=False
+                )
+            else:
+                html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(
+                    img, ocr_result=ocr_res
+                )
 
         sum_elapse = time.time() - start
         all_elapse = f"- table_type: {talbe_type}\n table all cost: {sum_elapse:.5f}\n - table rec cost: {table_rec_elapse:.5f}\n - ocr cost: {det_cost + cls_cost + rec_cost:.5f}"
@@ -178,6 +187,10 @@ def main():
 
                     table_engine_type = gr.Dropdown(table_engine_list, label="Select Recognition Table Engine",
                                                     value=table_engine_list[0])
+                    small_box_cut_enhance = gr.Checkbox(
+                        label="识别框切割增强(关闭避免多余切割，开启减少漏切割)",
+                        value=True
+                    )
                     det_model = gr.Dropdown(det_models_labels, label="Select OCR Detection Model",
                                             value=det_models_labels[0])
                     rec_model = gr.Dropdown(rec_models_labels, label="Select OCR Recognition Model",
@@ -197,7 +210,7 @@ def main():
 
         run_button.click(
             fn=process_image,
-            inputs=[img_input, table_engine_type, det_model, rec_model],
+            inputs=[img_input, table_engine_type, det_model, rec_model, small_box_cut_enhance],
             outputs=[html_output, table_boxes_output, ocr_boxes_output, elapse_text]
         )
 
@@ -206,3 +219,15 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+html, elasp, polygons, logic_points, ocr_res = table_engine(
+    img,
+    morph_close=True,  # 是否进行形态学操作,辅助找到更多线框,默认为True
+    more_h_lines=True,  # 是否基于线框检测结果进行更多水平线检查，辅助找到更小线框, 默认为True
+    h_lines_threshold=100,  # 必须开启more_h_lines, 连接横线检测像素阈值，小于该值会生成新横线，默认为100
+    more_v_lines=True,  # 是否基于线框检测结果进行更多垂直线检查，辅助找到更小线框, 默认为True
+    v_lines_threshold=15,  # 必须开启more_v_lines, 连接竖线检测像素阈值，小于该值会生成新竖线，默认为15
+    extend_line=True,  # 是否基于线框检测结果进行线段延长，辅助找到更多线框, 默认为True
+    need_ocr=True,  # 是否进行OCR识别, 默认为True
+    rec_again=True,  # 是否针对未识别到文字的表格框,进行单独截取再识别,默认为True
+)
