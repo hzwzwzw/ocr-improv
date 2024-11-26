@@ -5,6 +5,7 @@ import gradio as gr
 from lineless_table_rec import LinelessTableRecognition
 from paddleocr import PPStructure
 from rapid_table import RapidTable
+from rapid_table.table_structure.utils import trans_char_ocr_res
 from rapidocr_onnxruntime import RapidOCR
 from table_cls import TableCls
 from wired_table_rec import WiredTableRecognition
@@ -94,7 +95,7 @@ def select_table_model(img, table_engine_type, det_model, rec_model):
         return lineless_table_engine, "lineless_table"
 
 
-def process_image(img, table_engine_type, det_model, rec_model, small_box_cut_enhance):
+def process_image(img, table_engine_type, det_model, rec_model, small_box_cut_enhance, char_ocr):
     img = img_loader(img)
     start = time.time()
     table_engine, talbe_type = select_table_model(img, table_engine_type, det_model, rec_model)
@@ -108,24 +109,17 @@ def process_image(img, table_engine_type, det_model, rec_model, small_box_cut_en
         ocr_boxes = result[0]['res']['boxes']
         all_elapse = f"- `table all cost: {time.time() - start:.5f}`"
     else:
-        ocr_res, ocr_infer_elapse = ocr_engine(img)
+        ocr_res, ocr_infer_elapse = ocr_engine(img, return_word_box=char_ocr)
         det_cost, cls_cost, rec_cost = ocr_infer_elapse
+        if char_ocr:
+            ocr_res = trans_char_ocr_res(ocr_res)
         ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
         if isinstance(table_engine, RapidTable):
             html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
             polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
         elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
-            html, table_rec_elapse, polygons, _, _ = table_engine(img, ocr_result=ocr_res)
-            if not small_box_cut_enhance:
-                html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(
-                    img, ocr_result=ocr_res,
-                    morph_close=False, more_h_lines=False, more_v_lines=False, extend_line=False
-                )
-            else:
-                html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(
-                    img, ocr_result=ocr_res
-                )
-
+            html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(img, ocr_result=ocr_res,
+                                                                                   enhance_box_line=small_box_cut_enhance)
         sum_elapse = time.time() - start
         all_elapse = f"- table_type: {talbe_type}\n table all cost: {sum_elapse:.5f}\n - table rec cost: {table_rec_elapse:.5f}\n - ocr cost: {det_cost + cls_cost + rec_cost:.5f}"
 
@@ -191,6 +185,10 @@ def main():
                         label="识别框切割增强(关闭避免多余切割，开启减少漏切割)",
                         value=True
                     )
+                    char_ocr = gr.Checkbox(
+                        label="中文单字OCR匹配",
+                        value=True
+                    )
                     det_model = gr.Dropdown(det_models_labels, label="Select OCR Detection Model",
                                             value=det_models_labels[0])
                     rec_model = gr.Dropdown(rec_models_labels, label="Select OCR Recognition Model",
@@ -210,7 +208,7 @@ def main():
 
         run_button.click(
             fn=process_image,
-            inputs=[img_input, table_engine_type, det_model, rec_model, small_box_cut_enhance],
+            inputs=[img_input, table_engine_type, det_model, rec_model, small_box_cut_enhance, char_ocr],
             outputs=[html_output, table_boxes_output, ocr_boxes_output, elapse_text]
         )
 
