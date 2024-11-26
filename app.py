@@ -5,7 +5,7 @@ import gradio as gr
 from lineless_table_rec import LinelessTableRecognition
 from paddleocr import PPStructure
 from rapid_table import RapidTable
-from rapid_table.table_structure.utils import trans_char_ocr_res
+from wired_table_rec.utils_table_recover import trans_char_ocr_res
 from rapidocr_onnxruntime import RapidOCR
 from table_cls import TableCls
 from wired_table_rec import WiredTableRecognition
