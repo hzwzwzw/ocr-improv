@@ -5,7 +5,6 @@ import gradio as gr
 from lineless_table_rec import LinelessTableRecognition
 from paddleocr import PPStructure
 from rapid_table import RapidTable
-from wired_table_rec.utils_table_recover import trans_char_ocr_res
 from rapidocr_onnxruntime import RapidOCR
 from table_cls import TableCls
 from wired_table_rec import WiredTableRecognition
@@ -68,6 +67,17 @@ for det_model in det_model_dir.keys():
             rec_model_dir=rec_model_path
         )
 
+def trans_char_ocr_res(ocr_res):
+    word_result = []
+    for res in ocr_res:
+        score = res[2]
+        for word_box, word in zip(res[3], res[4]):
+            word_res = []
+            word_res.append(word_box)
+            word_res.append(word)
+            word_res.append(score)
+            word_result.append(word_res)
+    return word_result
 
 def select_ocr_model(det_model, rec_model):
     return ocr_engine_dict[f"{det_model}_{rec_model}"]
