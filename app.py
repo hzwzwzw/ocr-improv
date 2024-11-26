@@ -197,7 +197,7 @@ def main():
                     )
                     char_ocr = gr.Checkbox(
                         label="中文单字OCR匹配",
-                        value=True
+                        value=False
                     )
                     det_model = gr.Dropdown(det_models_labels, label="Select OCR Detection Model",
                                             value=det_models_labels[0])
