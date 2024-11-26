@@ -1,5 +1,5 @@
-wired_table_rec>=1.6.0
-lineless_table_rec>=0.9.0
+wired_table_rec>=1.1.6
+lineless_table_rec>=0.0.9
 table_cls
 rapid_table>=0.3.0
 paddleocr
