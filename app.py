@@ -105,8 +105,10 @@ def select_table_model(img, table_engine_type, det_model, rec_model):
         return lineless_table_engine, "lineless_table"
 
 
-def process_image(img, table_engine_type, det_model, rec_model, small_box_cut_enhance, char_ocr):
-    img = img_loader(img)
+def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr, rotated_fix, col_threshold, row_threshold):
+    det_model="mobile_det"
+    rec_model="mobile_rec"
+    img = img_loader(img_input)
     start = time.time()
     table_engine, talbe_type = select_table_model(img, table_engine_type, det_model, rec_model)
     ocr_engine = select_ocr_model(det_model, rec_model)
@@ -129,7 +131,10 @@ def process_image(img, table_engine_type, det_model, rec_model, small_box_cut_en
             polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
         elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
             html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(img, ocr_result=ocr_res,
-                                                                                   enhance_box_line=small_box_cut_enhance)
+                                                                                   enhance_box_line=small_box_cut_enhance,
+                                                                                   rotated_fix=rotated_fix,
+                                                                                   col_threshold=col_threshold,
+                                                                                   row_threshold=row_threshold)
         sum_elapse = time.time() - start
         all_elapse = f"- table_type: {talbe_type}\n table all cost: {sum_elapse:.5f}\n - table rec cost: {table_rec_elapse:.5f}\n - ocr cost: {det_cost + cls_cost + rec_cost:.5f}"
 
@@ -199,10 +204,29 @@ def main():
                         label="中文单字OCR匹配",
                         value=False
                     )
-                    det_model = gr.Dropdown(det_models_labels, label="Select OCR Detection Model",
-                                            value=det_models_labels[0])
-                    rec_model = gr.Dropdown(rec_models_labels, label="Select OCR Recognition Model",
-                                            value=rec_models_labels[0])
+                    rotate_adapt = gr.Checkbox(
+                        label="表格旋转识别增强",
+                        value=False
+                    )
+                    col_threshold = gr.Slider(
+                        label="同列x坐标距离阈值",
+                        minimum=5,
+                        maximum=100,
+                        value=15,
+                        step=5
+                    )
+                    row_threshold = gr.Slider(
+                        label="同行y坐标距离阈值",
+                        minimum=5,
+                        maximum=100,
+                        value=10,
+                        step=5
+                    )
+
+                    # det_model = gr.Dropdown(det_models_labels, label="Select OCR Detection Model",
+                    #                         value=det_models_labels[0])
+                    # rec_model = gr.Dropdown(rec_models_labels, label="Select OCR Recognition Model",
+                    #                         value=rec_models_labels[0])
 
                     run_button = gr.Button("Run")
                     gr.Markdown("# Elapsed Time")
@@ -218,7 +242,7 @@ def main():
 
         run_button.click(
             fn=process_image,
-            inputs=[img_input, table_engine_type, det_model, rec_model, small_box_cut_enhance, char_ocr],
+            inputs=[img_input, small_box_cut_enhance, table_engine_type, char_ocr, rotate_adapt, col_threshold, row_threshold],
             outputs=[html_output, table_boxes_output, ocr_boxes_output, elapse_text]
         )
 
