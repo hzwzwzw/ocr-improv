@@ -5,5 +5,5 @@ rapid_table>=0.3.0
 paddleocr
 paddlepaddle
 slanet_plus_table
-rapidocr_onnxruntime>=1.4.1
+rapidocr_onnxruntime==1.4.0
 gradio
