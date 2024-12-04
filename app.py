@@ -201,7 +201,7 @@ def main():
                         value=True
                     )
                     char_ocr = gr.Checkbox(
-                        label="中英文单字符OCR匹配",
+                        label="中文单字符OCR匹配",
                         value=False
                     )
                     rotate_adapt = gr.Checkbox(
