@@ -3,7 +3,6 @@ import time
 import cv2
 import gradio as gr
 from lineless_table_rec import LinelessTableRecognition
-from paddleocr import PPStructure
 from rapid_table import RapidTable
 from rapidocr_onnxruntime import RapidOCR
 from table_cls import TableCls
@@ -25,7 +24,6 @@ table_engine_list = [
     "RapidTable(SLANet)",
     "RapidTable(SLANet-plus)",
     "wired_table_v2",
-    "pp_table",
     "wired_table_v1",
     "lineless_table"
 ]
@@ -57,15 +55,6 @@ for det_model in det_model_dir.keys():
         rec_model_path = rec_model_dir[rec_model]
         key = f"{det_model}_{rec_model}"
         ocr_engine_dict[key] = RapidOCR(det_model_path=det_model_path, rec_model_path=rec_model_path)
-        pp_engine_dict[key] = PPStructure(
-            layout=False,
-            show_log=False,
-            table=True,
-            use_onnx=True,
-            table_model_dir=table_rec_path,
-            det_model_dir=det_model_path,
-            rec_model_dir=rec_model_path
-        )
 
 def trans_char_ocr_res(ocr_res):
     word_result = []
@@ -95,8 +84,6 @@ def select_table_model(img, table_engine_type, det_model, rec_model):
         return wired_table_engine_v2, table_engine_type
     elif table_engine_type == "lineless_table":
         return lineless_table_engine, table_engine_type
-    elif table_engine_type == "pp_table":
-        return pp_engine_dict[f"{det_model}_{rec_model}"], 0
     elif table_engine_type == "auto":
         cls, elasp = table_cls(img)
         if cls == 'wired':
@@ -113,30 +100,22 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
     table_engine, talbe_type = select_table_model(img, table_engine_type, det_model, rec_model)
     ocr_engine = select_ocr_model(det_model, rec_model)
 
-    if isinstance(table_engine, PPStructure):
-        result = table_engine(img, return_ocr_result_in_table=True)
-        html = result[0]['res']['html']
-        polygons = result[0]['res']['cell_bbox']
+    ocr_res, ocr_infer_elapse = ocr_engine(img, return_word_box=char_ocr)
+    det_cost, cls_cost, rec_cost = ocr_infer_elapse
+    if char_ocr:
+        ocr_res = trans_char_ocr_res(ocr_res)
+    ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
+    if isinstance(table_engine, RapidTable):
+        html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
         polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
-        ocr_boxes = result[0]['res']['boxes']
-        all_elapse = f"- `table all cost: {time.time() - start:.5f}`"
-    else:
-        ocr_res, ocr_infer_elapse = ocr_engine(img, return_word_box=char_ocr)
-        det_cost, cls_cost, rec_cost = ocr_infer_elapse
-        if char_ocr:
-            ocr_res = trans_char_ocr_res(ocr_res)
-        ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
-        if isinstance(table_engine, RapidTable):
-            html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
-            polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
-        elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
-            html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(img, ocr_result=ocr_res,
+    elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
+        html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(img, ocr_result=ocr_res,
                                                                                    enhance_box_line=small_box_cut_enhance,
                                                                                    rotated_fix=rotated_fix,
                                                                                    col_threshold=col_threshold,
                                                                                    row_threshold=row_threshold)
-        sum_elapse = time.time() - start
-        all_elapse = f"- table_type: {talbe_type}\n table all cost: {sum_elapse:.5f}\n - table rec cost: {table_rec_elapse:.5f}\n - ocr cost: {det_cost + cls_cost + rec_cost:.5f}"
+    sum_elapse = time.time() - start
+    all_elapse = f"- table_type: {talbe_type}\n table all cost: {sum_elapse:.5f}\n - table rec cost: {table_rec_elapse:.5f}\n - ocr cost: {det_cost + cls_cost + rec_cost:.5f}"
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     table_boxes_img = plot_rec_box(img.copy(), polygons)
@@ -165,7 +144,7 @@ def main():
         }
     """) as demo:
         gr.HTML(
-            "<h1 style='text-align: center;'><a href='https://github.com/RapidAI/TableStructureRec?tab=readme-ov-file'>TableStructureRec</a></h1>"
+            "<h1 style='text-align: center;'><a href='https://github.com/RapidAI/TableStructureRec?tab=readme-ov-file'>TableStructureRec</a> & <a href='https://github.com/RapidAI/RapidTable'>RapidTable</a></h1>"
         )
         gr.HTML('''
                                         <div class="header-links">
@@ -174,6 +153,7 @@ def main():
                                           <a href="https://pypi.org/project/lineless-table-rec/"><img alt="PyPI" src="https://img.shields.io/pypi/v/lineless-table-rec"></a>
                                           <a href="https://pepy.tech/project/lineless-table-rec"><img src="https://static.pepy.tech/personalized-badge/lineless-table-rec?period=total&units=abbreviation&left_color=grey&right_color=blue&left_text=Downloads%20Lineless"></a>
                                           <a href="https://pepy.tech/project/wired-table-rec"><img src="https://static.pepy.tech/personalized-badge/wired-table-rec?period=total&units=abbreviation&left_color=grey&right_color=blue&left_text=Downloads%20Wired"></a>
+                                          <a href="https://pepy.tech/project/rapid-table"><img src="https://static.pepy.tech/personalized-badge/rapid-table?period=total&units=abbreviation&left_color=grey&right_color=blue&left_text=Downloads%20RapidTable"></a>
                                           <a href="https://semver.org/"><img alt="SemVer2.0" src="https://img.shields.io/badge/SemVer-2.0-brightgreen"></a>
                                           <a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
                                           <a href="https://github.com/RapidAI/TableStructureRec/blob/c41bbd23898cb27a957ed962b0ffee3c74dfeff1/LICENSE"><img alt="GitHub" src="https://img.shields.io/badge/license-Apache 2.0-blue"></a>

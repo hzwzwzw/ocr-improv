@@ -1,9 +1,6 @@
-wired_table_rec>=1.1.9
-lineless_table_rec>=0.0.9
+wired_table_rec
+lineless_table_rec
 table_cls
-rapid_table>=0.3.0
-paddleocr
-paddlepaddle
-slanet_plus_table
-rapidocr_onnxruntime==1.4.3
+rapid_table
+rapidocr_onnxruntime
 gradio
