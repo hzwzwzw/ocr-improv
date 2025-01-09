@@ -43,9 +43,13 @@ example_images = [
     "images/wired7.jpg",
     "images/wired9.jpg",
 ]
-rapid_table_engine = RapidTable(RapidTableInput(model_type=ModelType.PPSTRUCTURE_ZH.value))
-SLANet_plus_table_Engine = RapidTable(RapidTableInput(model_type=ModelType.SLANETPLUS.value))
-unitable_table_Engine = RapidTable(RapidTableInput(model_type=ModelType.UNITABLE.value))
+rapid_table_engine = RapidTable(RapidTableInput(model_type=ModelType.PPSTRUCTURE_ZH.value, model_path="models/tsr/ch_ppstructure_mobile_v2_SLANet.onnx"))
+SLANet_plus_table_Engine = RapidTable(RapidTableInput(model_type=ModelType.SLANETPLUS.value, model_path="models/tsr/slanet-plus.onnx"))
+unitable_table_Engine = RapidTable(RapidTableInput(model_type=ModelType.UNITABLE.value, model_path={
+            "encoder": f"models/tsr/unitable_encoder.pth",
+            "decoder": f"models/tsr/unitable_decoder.pth",
+            "vocab": f"models/tsr/unitable_vocab.json",
+        }))
 wired_table_engine_v1 = WiredTableRecognition(version="v1")
 wired_table_engine_v2 = WiredTableRecognition(version="v2")
 lineless_table_engine = LinelessTableRecognition()
