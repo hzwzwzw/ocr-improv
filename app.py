@@ -3,7 +3,8 @@ import time
 import cv2
 import gradio as gr
 from lineless_table_rec import LinelessTableRecognition
-from rapid_table import RapidTable
+from rapid_table import RapidTable, RapidTableInput
+from rapid_table.main import ModelType
 from rapidocr_onnxruntime import RapidOCR
 from table_cls import TableCls
 from wired_table_rec import WiredTableRecognition
@@ -23,6 +24,7 @@ table_engine_list = [
     "auto",
     "RapidTable(SLANet)",
     "RapidTable(SLANet-plus)",
+    "RapidTable(unitable)",
     "wired_table_v2",
     "wired_table_v1",
     "lineless_table"
@@ -41,8 +43,9 @@ example_images = [
     "images/wired7.jpg",
     "images/wired9.jpg",
 ]
-rapid_table_engine = RapidTable(model_path=table_rec_path)
-SLANet_plus_table_Engine = RapidTable()
+rapid_table_engine = RapidTable(RapidTableInput(model_type=ModelType.PPSTRUCTURE_ZH.value))
+SLANet_plus_table_Engine = RapidTable(RapidTableInput(model_type=ModelType.SLANETPLUS.value))
+unitable_table_Engine = RapidTable(RapidTableInput(model_type=ModelType.UNITABLE.value))
 wired_table_engine_v1 = WiredTableRecognition(version="v1")
 wired_table_engine_v2 = WiredTableRecognition(version="v2")
 lineless_table_engine = LinelessTableRecognition()
@@ -77,6 +80,8 @@ def select_table_model(img, table_engine_type, det_model, rec_model):
         return rapid_table_engine, table_engine_type
     elif table_engine_type == "RapidTable(SLANet-plus)":
         return SLANet_plus_table_Engine, table_engine_type
+    elif table_engine_type == "RapidTable(unitable)":
+        return unitable_table_Engine, table_engine_type
     elif table_engine_type == "wired_table_v1":
         return wired_table_engine_v1, table_engine_type
     elif table_engine_type == "wired_table_v2":
@@ -106,7 +111,8 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
         ocr_res = trans_char_ocr_res(ocr_res)
     ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
     if isinstance(table_engine, RapidTable):
-        html, polygons, table_rec_elapse = table_engine(img, ocr_result=ocr_res)
+        table_results = table_engine(img, ocr_res)
+        html, polygons, table_rec_elapse = table_results.pred_html, table_results.cell_bboxes,table_results.elapse
         polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
     elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
         html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(img, ocr_result=ocr_res,
