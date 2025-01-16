@@ -187,26 +187,26 @@ def main():
                     table_engine_type = gr.Dropdown(table_engine_list, label="Select Recognition Table Engine",
                                                     value=table_engine_list[0])
                     small_box_cut_enhance = gr.Checkbox(
-                        label="识别框切割增强(关闭避免多余切割，开启减少漏切割)",
+                        label="识别框切割增强(wiredV2,关闭避免多余切割，开启减少漏切割)",
                         value=True
                     )
                     char_ocr = gr.Checkbox(
-                        label="中文单字符OCR匹配",
+                        label="单字符OCR匹配",
                         value=False
                     )
                     rotate_adapt = gr.Checkbox(
-                        label="表格旋转识别增强",
+                        label="表格旋转识别增强(wiredV2)",
                         value=False
                     )
                     col_threshold = gr.Slider(
-                        label="同列x坐标距离阈值",
+                        label="同列x坐标距离阈值(wiredV2)",
                         minimum=5,
                         maximum=100,
                         value=15,
                         step=5
                     )
                     row_threshold = gr.Slider(
-                        label="同行y坐标距离阈值",
+                        label="同行y坐标距离阈值(wiredV2)",
                         minimum=5,
                         maximum=100,
                         value=10,
