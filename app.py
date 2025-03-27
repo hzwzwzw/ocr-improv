@@ -32,16 +32,8 @@ table_engine_list = [
 
 # 示例图片路径
 example_images = [
-    "images/wired1.jpg",
-    "images/wired2.png",
-    "images/wired3.png",
-    "images/lineless1.jpg",
-    "images/wired4.jpg",
-    "images/lineless2.png",
-    "images/wired5.jpg",
-    "images/lineless4.jpg",
-    "images/wired7.jpg",
-    "images/wired9.jpg",
+    "images/10.jpg",
+    "images/JC.png"
 ]
 rapid_table_engine = RapidTable(RapidTableInput(model_type=ModelType.PPSTRUCTURE_ZH.value, model_path="models/tsr/ch_ppstructure_mobile_v2_SLANet.onnx"))
 SLANet_plus_table_Engine = RapidTable(RapidTableInput(model_type=ModelType.SLANETPLUS.value, model_path="models/tsr/slanet-plus.onnx"))
@@ -109,7 +101,15 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
     table_engine, talbe_type = select_table_model(img, table_engine_type, det_model, rec_model)
     ocr_engine = select_ocr_model(det_model, rec_model)
 
-    ocr_res, ocr_infer_elapse = ocr_engine(img, return_word_box=char_ocr)
+    ocr_res, ocr_infer_elapse = ocr_engine(img,
+                                           max_side_len=2000,
+                                        #    det_limit_side_len=960,
+                                           det_limit_type="min",
+                                        #    det_thresh=0.1,
+                                           det_box_thresh=0.1,
+                                           text_score=0.01,
+
+                                           return_word_box=char_ocr)
     det_cost, cls_cost, rec_cost = ocr_infer_elapse
     if char_ocr:
         ocr_res = trans_char_ocr_res(ocr_res)
