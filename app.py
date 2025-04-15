@@ -13,6 +13,8 @@ from utils import plot_rec_box, LoadImage, format_html, box_4_2_poly_to_box_4_1
 
 import numpy as np
 
+import ocrtest
+
 img_loader = LoadImage()
 table_rec_path = "models/table_rec/ch_ppstructure_mobile_v2_SLANet.onnx"
 det_model_dir = {
@@ -95,10 +97,12 @@ def select_table_model(img, table_engine_type, det_model, rec_model):
         return lineless_table_engine, "lineless_table"
 
 
-def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr, rotated_fix, col_threshold, row_threshold):
+def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr, rotated_fix, col_threshold, row_threshold, remove_line, preproc):
     det_model="mobile_det"
     rec_model="mobile_rec"
     img = img_loader(img_input)
+    if preproc:
+        img = ocrtest.proc(img)
     start = time.time()
     table_engine, talbe_type = select_table_model(img, table_engine_type, det_model, rec_model)
     ocr_engine = select_ocr_model(det_model, rec_model)
@@ -130,11 +134,12 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
     # 对原图像做处理，去除掉这些框线，只保留内部文字
     # 注意自适应识别框线的宽度
     # Remove table lines while preserving text
-    if True:
+    if remove_line:
+        # TODO: bad implementation, replicate computation, need improved
         oriimg = img.copy()
         for polygon in polygons:
             # reshape to points
-            print("polygon", polygon)
+            # print("polygon", polygon)
             points = [[polygon[0], polygon[1]], [polygon[0], polygon[3]], [polygon[2], polygon[3]], [polygon[2], polygon[1]]]
             points = np.array(points, dtype=np.int32)
             def removeline(point1, point2):
@@ -151,7 +156,7 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
                     else:
                         minv, maxv = sorted([pa[0], pb[0]])
                         avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                    print("avgcolor", avgcolor)
+                    # print("avgcolor", avgcolor)
                     if np.mean(avgcolor) < 200:
                         cv2.line(img, tuple(pa), tuple(pb), (255, 255, 255), 1)
                     pa = pa + normal
@@ -165,7 +170,7 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
                     else:
                         minv, maxv = sorted([pa[0], pb[0]])
                         avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                    print("avgcolor", avgcolor)
+                    # print("avgcolor", avgcolor)
                     if np.mean(avgcolor) < 200:
                         cv2.line(img, tuple(pa), tuple(pb), (255, 255, 255), 1)
                     pa = pa - normal
@@ -259,9 +264,17 @@ def main():
                         label="识别框切割增强(wiredV2,关闭避免多余切割，开启减少漏切割)",
                         value=True
                     )
+                    remove_line = gr.Checkbox(
+                        label="去除表格线(hzw)",
+                        value=True
+                    )
+                    preproc = gr.Checkbox(
+                        label="预处理(去噪、二值化等，效果不佳)(hzw)",
+                        value=False
+                    )
                     char_ocr = gr.Checkbox(
                         label="单字符OCR匹配",
-                        value=False
+                        value=True
                     )
                     rotate_adapt = gr.Checkbox(
                         label="表格旋转识别增强(wiredV2)",
@@ -271,14 +284,14 @@ def main():
                         label="同列x坐标距离阈值(wiredV2)",
                         minimum=5,
                         maximum=100,
-                        value=15,
+                        value=5,
                         step=5
                     )
                     row_threshold = gr.Slider(
                         label="同行y坐标距离阈值(wiredV2)",
                         minimum=5,
                         maximum=100,
-                        value=10,
+                        value=5,
                         step=5
                     )
 
@@ -301,7 +314,7 @@ def main():
 
         run_button.click(
             fn=process_image,
-            inputs=[img_input, small_box_cut_enhance, table_engine_type, char_ocr, rotate_adapt, col_threshold, row_threshold],
+            inputs=[img_input, small_box_cut_enhance, table_engine_type, char_ocr, rotate_adapt, col_threshold, row_threshold, remove_line, preproc],
             outputs=[html_output, table_boxes_output, ocr_boxes_output, elapse_text]
         )
 

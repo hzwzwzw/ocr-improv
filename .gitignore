@@ -2,3 +2,5 @@
 .idea/*
 gradio_cache*
 /log
+clean_img.jpg
+__pycache__
