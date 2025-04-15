@@ -1,3 +1,4 @@
 /sdaf
 .idea/*
 gradio_cache*
+/log

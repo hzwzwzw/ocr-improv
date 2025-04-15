@@ -11,6 +11,8 @@ from wired_table_rec import WiredTableRecognition
 
 from utils import plot_rec_box, LoadImage, format_html, box_4_2_poly_to_box_4_1
 
+import numpy as np
+
 img_loader = LoadImage()
 table_rec_path = "models/table_rec/ch_ppstructure_mobile_v2_SLANet.onnx"
 det_model_dir = {
@@ -124,6 +126,73 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
                                                                                    rotated_fix=rotated_fix,
                                                                                    col_threshold=col_threshold,
                                                                                    row_threshold=row_threshold)
+    # 在获得了 polygons 之后，也就有了表格框线所在的位置
+    # 对原图像做处理，去除掉这些框线，只保留内部文字
+    # 注意自适应识别框线的宽度
+    # Remove table lines while preserving text
+    if True:
+        oriimg = img.copy()
+        for polygon in polygons:
+            # reshape to points
+            print("polygon", polygon)
+            points = [[polygon[0], polygon[1]], [polygon[0], polygon[3]], [polygon[2], polygon[3]], [polygon[2], polygon[1]]]
+            points = np.array(points, dtype=np.int32)
+            def removeline(point1, point2):
+                if point1[0] == point2[0]:
+                    normal = np.array([1, 0])
+                else:
+                    normal = np.array([0, 1])
+                pa = point1.copy().astype(np.int32)
+                pb = point2.copy().astype(np.int32)
+                for i in range(1, 10):
+                    if pa[0] == pb[0]:
+                        minv, maxv = sorted([pa[1], pb[1]])
+                        avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
+                    else:
+                        minv, maxv = sorted([pa[0], pb[0]])
+                        avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
+                    print("avgcolor", avgcolor)
+                    if np.mean(avgcolor) < 200:
+                        cv2.line(img, tuple(pa), tuple(pb), (255, 255, 255), 1)
+                    pa = pa + normal
+                    pb = pb + normal
+                pa = point1.copy() - normal
+                pb = point2.copy() - normal
+                for i in range(1, 10):
+                    if pa[0] == pb[0]:
+                        minv, maxv = sorted([pa[1], pb[1]])
+                        avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
+                    else:
+                        minv, maxv = sorted([pa[0], pb[0]])
+                        avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
+                    print("avgcolor", avgcolor)
+                    if np.mean(avgcolor) < 200:
+                        cv2.line(img, tuple(pa), tuple(pb), (255, 255, 255), 1)
+                    pa = pa - normal
+                    pb = pb - normal
+            removeline(points[0], points[1])
+            removeline(points[1], points[2])
+            removeline(points[2], points[3])
+            removeline(points[3], points[0])
+        cv2.imwrite("clean_img.jpg", img)
+        # re ocr 
+        ocr_res, ocr_infer_elapse = ocr_engine(img,
+                                               max_side_len=2000,
+                                               det_limit_type="min",
+                                               det_box_thresh=0.1,
+                                               text_score=0.01,
+                                               return_word_box=char_ocr)
+        det_cost, cls_cost, rec_cost = ocr_infer_elapse
+        if char_ocr:
+            ocr_res = trans_char_ocr_res(ocr_res)
+        ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
+        html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(oriimg, ocr_result=ocr_res,
+                                                                                   enhance_box_line=small_box_cut_enhance,
+                                                                                   rotated_fix=rotated_fix,
+                                                                                   col_threshold=col_threshold,
+                                                                                   row_threshold=row_threshold)
+        
+    
     sum_elapse = time.time() - start
     all_elapse = f"- table_type: {talbe_type}\n table all cost: {sum_elapse:.5f}\n - table rec cost: {table_rec_elapse:.5f}\n - ocr cost: {det_cost + cls_cost + rec_cost:.5f}"
 
