@@ -4,3 +4,4 @@ gradio_cache*
 /log
 clean_img.jpg
 __pycache__
+/modeltest

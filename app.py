@@ -102,7 +102,8 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
     rec_model="mobile_rec"
     img = img_loader(img_input)
     if preproc:
-        img = ocrtest.proc(img)
+        # img = ocrtest.proc(img)
+        pass
     start = time.time()
     table_engine, talbe_type = select_table_model(img, table_engine_type, det_model, rec_model)
     ocr_engine = select_ocr_model(det_model, rec_model)
@@ -149,30 +150,112 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
                     normal = np.array([0, 1])
                 pa = point1.copy().astype(np.int32)
                 pb = point2.copy().astype(np.int32)
-                for i in range(1, 10):
+                find = False
+                for i in range(1, 20):
                     if pa[0] == pb[0]:
                         minv, maxv = sorted([pa[1], pb[1]])
                         avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
+                        varcolor = np.var(oriimg[minv:maxv, pa[0], :], axis=0)
+                        pa = [pa[0], minv]
+                        pb = [pb[0], maxv]
+                        # while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
+                        #     pa[1] = pa[1] - 1
+                        #     avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
+                        # while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
+                        #     pb[1] = pb[1] + 1
+                        #     avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
                     else:
                         minv, maxv = sorted([pa[0], pb[0]])
                         avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
+                        varcolor = np.var(oriimg[pa[1], minv:maxv, :], axis=0)
+                        pa = [minv, pa[1]]
+                        pb = [maxv, pb[1]]
+                        # while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
+                        #     pa[0] = pa[0] - 1
+                        #     avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
+                        # while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
+                        #     pb[0] = pb[0] + 1
+                        #     avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
                     # print("avgcolor", avgcolor)
-                    if np.mean(avgcolor) < 200:
+                    print(np.max(varcolor))
+                    if np.min(avgcolor) < 200:#230 and np.max(varcolor) < 5000:
+                        if pa[0] == pb[0]:
+                            pa = [pa[0], minv]
+                            pb = [pb[0], maxv]
+                            while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
+                                pa[1] = pa[1] - 1
+                                avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
+                            while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
+                                pb[1] = pb[1] + 1
+                                avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
+                        else:
+                            pa = [minv, pa[1]]
+                            pb = [maxv, pb[1]]
+                            while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
+                                pa[0] = pa[0] - 1
+                                avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
+                            while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
+                                pb[0] = pb[0] + 1
+                                avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
                         cv2.line(img, tuple(pa), tuple(pb), (255, 255, 255), 1)
+                        find = True
+                    elif find:
+                        break
+            
                     pa = pa + normal
                     pb = pb + normal
                 pa = point1.copy() - normal
                 pb = point2.copy() - normal
-                for i in range(1, 10):
+                find  = False
+                for i in range(1, 20):
                     if pa[0] == pb[0]:
                         minv, maxv = sorted([pa[1], pb[1]])
                         avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
+                        varcolor = np.var(oriimg[minv:maxv, pa[0], :], axis=0)
+                        pa = [pa[0], minv]
+                        pb = [pb[0], maxv]
+                        # while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
+                        #     pa[1] = pa[1] - 1
+                        #     avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
+                        # while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
+                        #     pb[1] = pb[1] + 1
+                        #     avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
                     else:
                         minv, maxv = sorted([pa[0], pb[0]])
                         avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
+                        varcolor = np.var(oriimg[pa[1], minv:maxv, :], axis=0)
+                        pa = [minv, pa[1]]
+                        pb = [maxv, pb[1]]
+                        # while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
+                        #     pa[0] = pa[0] - 1
+                        #     avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
+                        # while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
+                        #     pb[0] = pb[0] + 1
+                        #     avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
                     # print("avgcolor", avgcolor)
-                    if np.mean(avgcolor) < 200:
+                    if np.min(avgcolor) < 200:#230 and np.max(varcolor) < 5000:
+                        if pa[0] == pb[0]:
+                            pa = [pa[0], minv]
+                            pb = [pb[0], maxv]
+                            while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
+                                pa[1] = pa[1] - 1
+                                avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
+                            while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
+                                pb[1] = pb[1] + 1
+                                avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
+                        else:
+                            pa = [minv, pa[1]]
+                            pb = [maxv, pb[1]]
+                            while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
+                                pa[0] = pa[0] - 1
+                                avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
+                            while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
+                                pb[0] = pb[0] + 1
+                                avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
                         cv2.line(img, tuple(pa), tuple(pb), (255, 255, 255), 1)
+                        find = True
+                    elif find:
+                        break
                     pa = pa - normal
                     pb = pb - normal
             removeline(points[0], points[1])
@@ -180,6 +263,7 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
             removeline(points[2], points[3])
             removeline(points[3], points[0])
         cv2.imwrite("clean_img.jpg", img)
+
         # re ocr 
         ocr_res, ocr_infer_elapse = ocr_engine(img,
                                                max_side_len=2000,
