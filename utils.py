@@ -15,7 +15,9 @@ class LoadImage:
     ):
         pass
 
-    def __call__(self, img: InputType) -> np.ndarray:
+    def __call__(self, img: InputType) -> np.ndar
+                        ], ocr_result, 1.0
+    
         if not isinstance(img, InputType.__args__):
             raise LoadImageError(
                 f"The img type {type(img)} does not in {InputType.__args__}"

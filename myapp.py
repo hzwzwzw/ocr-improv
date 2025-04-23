@@ -11,6 +11,8 @@ from wired_table_rec import WiredTableRecognition
 
 from utils import plot_rec_box, LoadImage, format_html, box_4_2_poly_to_box_4_1
 
+import mywired
+
 import numpy as np
 
 import ocrtest
@@ -19,10 +21,12 @@ img_loader = LoadImage()
 table_rec_path = "models/table_rec/ch_ppstructure_mobile_v2_SLANet.onnx"
 det_model_dir = {
     "mobile_det": "models/ocr/ch_PP-OCRv4_det_server_infer.onnx",
+    # "mobile_det": "modeltest/cv_resnet18_ocr-detection-db-line-level_damo/model.onnx",
 }
 
 rec_model_dir = {
     "mobile_rec": "models/ocr/ch_PP-OCRv4_rec_server_infer.onnx",
+    # "mobile_rec": "modeltest/cv_convnextTiny_ocr-recognition-general_damo/model.onnx",
 }
 table_engine_list = [
     "auto",
@@ -105,189 +109,45 @@ def process_image(img_input, small_box_cut_enhance, table_engine_type, char_ocr,
         # img = ocrtest.proc(img)
         pass
     start = time.time()
-    table_engine, talbe_type = select_table_model(img, table_engine_type, det_model, rec_model)
+    # table_engine, talbe_type = select_table_model(img, table_engine_type, det_model, rec_model)
+    table_engine = mywired.mywired()
+    talbe_type = "wired_table_v2"
     ocr_engine = select_ocr_model(det_model, rec_model)
 
-    ocr_res, ocr_infer_elapse = ocr_engine(img,
-                                           max_side_len=2000,
-                                        #    det_limit_side_len=960,
-                                           det_limit_type="min",
-                                        #    det_thresh=0.1,
-                                           det_box_thresh=0.1,
-                                           text_score=0.01,
+    # ocr_res, ocr_infer_elapse = ocr_engine(img,
+    #                                        max_side_len=2000,
+    #                                     #    det_limit_side_len=960,
+    #                                        det_limit_type="min",
+    #                                     #    det_thresh=0.1,
+    #                                        det_box_thresh=0.1,
+    #                                        text_score=0.01,
 
-                                           return_word_box=char_ocr)
-    det_cost, cls_cost, rec_cost = ocr_infer_elapse
-    if char_ocr:
-        ocr_res = trans_char_ocr_res(ocr_res)
-    ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
+    #                                        return_word_box=char_ocr)
+    det_cost, cls_cost, rec_cost = 0, 0, 0
+    # if char_ocr:
+    #     ocr_res = trans_char_ocr_res(ocr_res)
+    # ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
     if isinstance(table_engine, RapidTable):
         table_results = table_engine(img, ocr_res)
         html, polygons, table_rec_elapse = table_results.pred_html, table_results.cell_bboxes,table_results.elapse
         polygons = [[polygon[0], polygon[1], polygon[4], polygon[5]] for polygon in polygons]
     elif isinstance(table_engine, (WiredTableRecognition, LinelessTableRecognition)):
-        html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(img, ocr_result=ocr_res,
+        html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(img, ocr_result=None,
                                                                                    enhance_box_line=small_box_cut_enhance,
                                                                                    rotated_fix=rotated_fix,
                                                                                    col_threshold=col_threshold,
                                                                                    row_threshold=row_threshold)
+        # ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
     # 在获得了 polygons 之后，也就有了表格框线所在的位置
     # 对原图像做处理，去除掉这些框线，只保留内部文字
     # 注意自适应识别框线的宽度
     # Remove table lines while preserving text
-    if remove_line:
-        # TODO: bad implementation, replicate computation, need improved
-        oriimg = img.copy()
-        for polygon in polygons:
-            # reshape to points
-            # print("polygon", polygon)
-            points = [[polygon[0], polygon[1]], [polygon[0], polygon[3]], [polygon[2], polygon[3]], [polygon[2], polygon[1]]]
-            points = np.array(points, dtype=np.int32)
-            def removeline(point1, point2):
-                if point1[0] == point2[0]:
-                    normal = np.array([1, 0])
-                else:
-                    normal = np.array([0, 1])
-                pa = point1.copy().astype(np.int32)
-                pb = point2.copy().astype(np.int32)
-                find = False
-                for i in range(1, 20):
-                    if pa[0] == pb[0]:
-                        minv, maxv = sorted([pa[1], pb[1]])
-                        avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
-                        varcolor = np.var(oriimg[minv:maxv, pa[0], :], axis=0)
-                        pa = [pa[0], minv]
-                        pb = [pb[0], maxv]
-                        # while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
-                        #     pa[1] = pa[1] - 1
-                        #     avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
-                        # while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
-                        #     pb[1] = pb[1] + 1
-                        #     avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
-                    else:
-                        minv, maxv = sorted([pa[0], pb[0]])
-                        avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                        varcolor = np.var(oriimg[pa[1], minv:maxv, :], axis=0)
-                        pa = [minv, pa[1]]
-                        pb = [maxv, pb[1]]
-                        # while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
-                        #     pa[0] = pa[0] - 1
-                        #     avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                        # while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
-                        #     pb[0] = pb[0] + 1
-                        #     avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                    # print("avgcolor", avgcolor)
-                    # print(np.max(varcolor))
-                    if np.min(avgcolor) < 200:#230 and np.max(varcolor) < 5000:
-                        if pa[0] == pb[0]:
-                            pa = [pa[0], minv]
-                            pb = [pb[0], maxv]
-                            while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
-                                pa[1] = pa[1] - 1
-                                avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
-                            while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
-                                pb[1] = pb[1] + 1
-                                avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
-                        else:
-                            pa = [minv, pa[1]]
-                            pb = [maxv, pb[1]]
-                            while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
-                                pa[0] = pa[0] - 1
-                                avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                            while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
-                                pb[0] = pb[0] + 1
-                                avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                        cv2.line(img, tuple(pa), tuple(pb), (255, 255, 255), 1)
-                        find = True
-                    elif find:
-                        break
-            
-                    pa = pa + normal
-                    pb = pb + normal
-                pa = point1.copy() - normal
-                pb = point2.copy() - normal
-                find  = False
-                for i in range(1, 20):
-                    if pa[0] == pb[0]:
-                        minv, maxv = sorted([pa[1], pb[1]])
-                        avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
-                        varcolor = np.var(oriimg[minv:maxv, pa[0], :], axis=0)
-                        pa = [pa[0], minv]
-                        pb = [pb[0], maxv]
-                        # while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
-                        #     pa[1] = pa[1] - 1
-                        #     avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
-                        # while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
-                        #     pb[1] = pb[1] + 1
-                        #     avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
-                    else:
-                        minv, maxv = sorted([pa[0], pb[0]])
-                        avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                        varcolor = np.var(oriimg[pa[1], minv:maxv, :], axis=0)
-                        pa = [minv, pa[1]]
-                        pb = [maxv, pb[1]]
-                        # while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
-                        #     pa[0] = pa[0] - 1
-                        #     avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                        # while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
-                        #     pb[0] = pb[0] + 1
-                        #     avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                    # print("avgcolor", avgcolor)
-                    if np.min(avgcolor) < 200:#230 and np.max(varcolor) < 5000:
-                        if pa[0] == pb[0]:
-                            pa = [pa[0], minv]
-                            pb = [pb[0], maxv]
-                            while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
-                                pa[1] = pa[1] - 1
-                                avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
-                            while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
-                                pb[1] = pb[1] + 1
-                                avgcolor = np.mean(oriimg[minv:maxv, pa[0], :], axis=0)
-                        else:
-                            pa = [minv, pa[1]]
-                            pb = [maxv, pb[1]]
-                            while np.linalg.norm(avgcolor - oriimg[pa[1], pa[0], :]) < 20:
-                                pa[0] = pa[0] - 1
-                                avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                            while np.linalg.norm(avgcolor - oriimg[pb[1], pb[0], :]) < 20:
-                                pb[0] = pb[0] + 1
-                                avgcolor = np.mean(oriimg[pa[1], minv:maxv, :], axis=0)
-                        cv2.line(img, tuple(pa), tuple(pb), (255, 255, 255), 1)
-                        find = True
-                    elif find:
-                        break
-                    pa = pa - normal
-                    pb = pb - normal
-            removeline(points[0], points[1])
-            removeline(points[1], points[2])
-            removeline(points[2], points[3])
-            removeline(points[3], points[0])
-        cv2.imwrite("clean_img.jpg", img)
-
-        # re ocr 
-        ocr_res, ocr_infer_elapse = ocr_engine(img,
-                                               max_side_len=2000,
-                                               det_limit_type="min",
-                                               det_box_thresh=0.1,
-                                               text_score=0.01,
-                                               return_word_box=char_ocr)
-        det_cost, cls_cost, rec_cost = ocr_infer_elapse
-        if char_ocr:
-            ocr_res = trans_char_ocr_res(ocr_res)
-        ocr_boxes = [box_4_2_poly_to_box_4_1(ori_ocr[0]) for ori_ocr in ocr_res]
-        html, table_rec_elapse, polygons, logic_points, ocr_res = table_engine(oriimg, ocr_result=ocr_res,
-                                                                                   enhance_box_line=small_box_cut_enhance,
-                                                                                   rotated_fix=rotated_fix,
-                                                                                   col_threshold=col_threshold,
-                                                                                   row_threshold=row_threshold)
-        
-    
     sum_elapse = time.time() - start
     all_elapse = f"- table_type: {talbe_type}\n table all cost: {sum_elapse:.5f}\n - table rec cost: {table_rec_elapse:.5f}\n - ocr cost: {det_cost + cls_cost + rec_cost:.5f}"
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     table_boxes_img = plot_rec_box(img.copy(), polygons)
-    ocr_boxes_img = plot_rec_box(img.copy(), ocr_boxes)
+    ocr_boxes_img = plot_rec_box(img.copy(), ocr_res)
     complete_html = format_html(html)
 
     return complete_html, table_boxes_img, ocr_boxes_img, all_elapse
