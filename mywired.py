@@ -131,6 +131,8 @@ class mywired(WiredTableRecognition):
             # 框线过滤
             def is_line(p1x, p1y, p2x, p2y):
                 # print(p1x, p1y, p2x, p2y)
+                if p1x < 0 or p1y < 0 or p2x < 0 or p2y < 0 or p1x >= img.shape[1] or p1y >= img.shape[0] or p2x >= img.shape[1] or p2y >= img.shape[0]:
+                    return False
                 if p1x == p2x:
                     line = img[p1y:p2y, p1x]
                 elif p1y == p2y:
@@ -247,6 +249,8 @@ class mywired(WiredTableRecognition):
                             ocr_cell_poly = ocr_cell_polys[j][k]
                             x1, y1, x2, y2 = ocr_cell_poly[0], ocr_cell_poly[1], ocr_cell_poly[2], ocr_cell_poly[3]
                             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                            if x1 >= x2 or y1 >= y2:
+                                continue
                             text_ratio = compute_ratio(img_blur[y1:y2+1, x1:x2+1], color_min, color_max)
                             edge_ratio = 0.3
                             similarx = [poly for poly in ocr_cell_polys[j] 
@@ -309,7 +313,10 @@ class mywired(WiredTableRecognition):
                         if x1 >= x2 or y1 >= y2 or y2 - y1 < avg_text_height * 0.2:
                             ocr_result = ""
                         else: 
-                            ocr_result = modeltest.ocr_recognition(img[y1:y2+2, x1:x2+2])['text'][0].strip()
+                            try:
+                                ocr_result = modeltest.ocr_recognition(img[y1:y2+2, x1:x2+2])['text'][0].strip()
+                            except:
+                                ocr_result = ""
                         if ocr_result != "":
                             findtext = True
                             gt_box = [[
