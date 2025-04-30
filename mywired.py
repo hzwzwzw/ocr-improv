@@ -41,12 +41,12 @@ def detect_text_gray_range(img):
     if background_mean > 128:
         bg_std_ratio = (255 - background_mean) / background_std
         lower = 0
-        upper = int(background_mean * 0.75 + text_mean * 0.25)
+        upper = int(background_mean * 0.5 + text_mean * 0.5)
         # upper = int(background_mean - bg_std_ratio * background_std)
     else:
         bg_std_ratio = background_mean / background_std
         # lower = int(background_mean + bg_std_ratio * background_std)
-        lower = int(background_mean * 0.75 + text_mean * 0.25)
+        lower = int(background_mean * 0.5 + text_mean * 0.5)
         upper = 255
     # print(text_mean, text_std)
 
@@ -221,52 +221,16 @@ class mywired(WiredTableRecognition):
             cv2.imwrite("img_blur.png", img_blur)
             color_min, color_max, text_ratio = detect_text_gray_range(img_blur)
             for j, polygon in enumerate(polygons):
-                if ocr_cell_polys.get(j) is None:
-                    # 没有文字
-                    # TODO
-                    ocr_cell_polys[j] = [[polygon[0][0], int(polygon[0][1] * 0.5 + polygon[2][1] * 0.5 - avg_text_height / 2), polygon[2][0], int(polygon[0][1] * 0.5 + polygon[2][1] * 0.5 + avg_text_height / 2)]]
-                
-                if True:
-                    x1_cell, y1_cell, x2_cell, y2_cell = polygon[0][0], polygon[0][1], polygon[2][0], polygon[2][1]
-                    if len(ocr_cell_polys[j]) == 1:
-                        # 只有一行文字
-                        # 适当拓展
-                        ocr_cell_poly = ocr_cell_polys[j][0]
-                        x1, y1, x2, y2 = ocr_cell_poly[0], ocr_cell_poly[1], ocr_cell_poly[2], ocr_cell_poly[3]
-                        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                        text_ratio = compute_ratio(img_blur[y1:y2+1, x1:x2+1], color_min, color_max)
-                        edge_ratio = 0.2
-                        max_extend = int(max(avg_text_height - (y2 - y1), 10) * 2)
-                        skipchance = int(max_extend / 2)
-                        lasti = 1
-                        for i in range(1, max_extend):
-                            if y2 + i > y2_cell or i == max_extend - 1:
-                                y2 = y2 + lasti - 1
-                                break
-                            if compute_ratio(img_blur[y2:y2+i+1, x1:x2+1], color_min, color_max) < text_ratio * edge_ratio:
-                                skipchance -= 1
-                                if skipchance == 0:
-                                    if lasti != 1:print(lasti)
-                                    y2 = y2 + lasti - 1
-                                    break
-                            else: 
-                                lasti = i
-                        skipchance = int(max_extend / 2)
-                        lasti = 1
-                        for i in range(1, max_extend):
-                            if y1 - i < y1_cell or i == max_extend - 1:
-                                y1 = y1 - lasti + 1
-                                break
-                            if compute_ratio(img_blur[y1-i:y1+1, x1:x2+1], color_min, color_max) < text_ratio * edge_ratio:
-                                skipchance -= 1
-                                if skipchance == 0:
-                                    y1 = y1 - lasti + 1
-                                    break
-                            else:
-                                lasti = i
-                        ocr_cell_polys[j][0] = [x1, y1, x2, y2]
-                    elif len(ocr_cell_polys[j]) > 1:
-                        # 多行文字
+                findtext = False
+                while True: # 非真循环，只在没有找到文本时重试一次
+                    if ocr_cell_polys.get(j) is None:
+                        # 没有文字
+                        # TODO
+                        print("no text")
+                        ocr_cell_polys[j] = [[polygon[0][0], int(polygon[0][1] * 0.5 + polygon[2][1] * 0.5 - avg_text_height / 2), polygon[2][0], int(polygon[0][1] * 0.5 + polygon[2][1] * 0.5 + avg_text_height / 2)]]
+                    
+                    if True:
+                        x1_cell, y1_cell, x2_cell, y2_cell = polygon[0][0], polygon[0][1], polygon[2][0], polygon[2][1]
                         # 根据y1排序
                         ocr_cell_polys[j] = sorted(ocr_cell_polys[j], key=lambda x: x[1])
                         for i in range(1, len(ocr_cell_polys[j])):
@@ -278,23 +242,93 @@ class mywired(WiredTableRecognition):
                                 mid = int((y1 + y2_last) / 2)
                                 ocr_cell_polys[j][i-1] = [x1_last, y1_last, x2_last, mid]
                                 ocr_cell_polys[j][i] = [x1, mid, x2, y2]
-                for ocr_cell_poly in ocr_cell_polys[j]:
-                    x1, y1, x2, y2 = ocr_cell_poly[0], ocr_cell_poly[1], ocr_cell_poly[2], ocr_cell_poly[3]
-                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                    # print(x1, y1, x2, y2)
-                    ocr_result = modeltest.ocr_recognition(img[y1:y2+1, x1:x2+1])['text'][0].strip()
-                    if ocr_result != "":
-                        gt_box = [[
-                            [ocr_cell_poly[0], ocr_cell_poly[1]],
-                            [ocr_cell_poly[2], ocr_cell_poly[1]],
-                            [ocr_cell_poly[2], ocr_cell_poly[3]],
-                            [ocr_cell_poly[0], ocr_cell_poly[3]], 
-                        ], ocr_result, 1.0]
-                        if j not in cell_box_det_map:
-                            cell_box_det_map[j] = [gt_box]
-                        else:
-                            cell_box_det_map[j].append(gt_box)
-                        ocr_results.append(gt_box)
+                        for k in range(0, len(ocr_cell_polys[j])):
+                            # 适当拓展
+                            ocr_cell_poly = ocr_cell_polys[j][k]
+                            x1, y1, x2, y2 = ocr_cell_poly[0], ocr_cell_poly[1], ocr_cell_poly[2], ocr_cell_poly[3]
+                            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                            text_ratio = compute_ratio(img_blur[y1:y2+1, x1:x2+1], color_min, color_max)
+                            edge_ratio = 0.3
+                            similarx = [poly for poly in ocr_cell_polys[j] 
+                                        if (x1 <= poly[0] <= x2 or x1 <= poly[2] <= x2 or poly[0] <= x1 <= poly[2] or poly[0] <= x2 <= poly[2])
+                                        and (poly[1] > y1 or poly[3] < y2)]
+                            toppoly = [poly[3] for poly in similarx if poly[3] < y2]
+                            botpoly = [poly[1] for poly in similarx if poly[1] > y1]
+                            maxtop = max(toppoly) if len(toppoly) > 0 else y1_cell
+                            maxbot = min(botpoly) if len(botpoly) > 0 else y2_cell
+                            # print(maxtop, maxbot, y1, y2)
+                            max_extend = int(max(min(max(avg_text_height - (y2 - y1), 10) * 2, maxbot - y2),0))
+                            skipchance = int(max_extend / 3)
+                            lasti = 1
+                            for i in range(1, max_extend):
+                                if y2 + i > y2_cell or i == max_extend - 1:
+                                    y2 = y2 + lasti - 1
+                                    break
+                                if compute_ratio(img_blur[y2:y2+i+1, x1:x2+1], color_min, color_max) < text_ratio * edge_ratio:
+                                    skipchance -= 1
+                                    if skipchance == 0:
+                                        if lasti != 1:print(lasti)
+                                        y2 = y2 + lasti - 1
+                                        break
+                                else: 
+                                    lasti = i
+                            max_extend = int(max(min(max(avg_text_height - (y2 - y1), 10) * 2, y1 - maxtop), 0))
+                            skipchance = int(max_extend / 2)
+                            lasti = 1
+                            for i in range(1, max_extend):
+                                if y1 - i < y1_cell or i == max_extend - 1:
+                                    y1 = y1 - lasti + 1
+                                    break
+                                if compute_ratio(img_blur[y1-i:y1+1, x1:x2+1], color_min, color_max) < text_ratio * edge_ratio:
+                                    skipchance -= 1
+                                    if skipchance == 0:
+                                        y1 = y1 - lasti + 1
+                                        break
+                                else:
+                                    lasti = i
+                            midx = int((x1 + x2) / 2)
+                            bg_ratio = 0.1
+                            while x1 < midx - avg_text_height:
+                                ratio = compute_ratio(img_blur[y1:y2+1, x1:x1+1], color_min, color_max)
+                                if ratio < text_ratio * bg_ratio or ratio > 0.95:
+                                    x1 += 1
+                                    print("add")
+                                else:
+                                    break
+                            while x2 > midx + avg_text_height:
+                                ratio = compute_ratio(img_blur[y1:y2+1, x2:x2+1], color_min, color_max)
+                                if ratio < text_ratio * bg_ratio or ratio > 0.95:
+                                    x2 -= 1
+                                else:
+                                    break
+                            # print(modeltest.ocr_recognition(img[y1:y2+2, x1:x2+2])['text'][0].strip())
+                            ocr_cell_polys[j][k] = [x1, y1, x2, y2]
+                    for ocr_cell_poly in ocr_cell_polys[j]:
+                        x1, y1, x2, y2 = ocr_cell_poly[0], ocr_cell_poly[1], ocr_cell_poly[2], ocr_cell_poly[3]
+                        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                        if x1 >= x2 or y1 >= y2 or y2 - y1 < avg_text_height * 0.2:
+                            ocr_result = ""
+                        else: 
+                            ocr_result = modeltest.ocr_recognition(img[y1:y2+2, x1:x2+2])['text'][0].strip()
+                        if ocr_result != "":
+                            findtext = True
+                            gt_box = [[
+                                [ocr_cell_poly[0], ocr_cell_poly[1]],
+                                [ocr_cell_poly[2], ocr_cell_poly[1]],
+                                [ocr_cell_poly[2], ocr_cell_poly[3]],
+                                [ocr_cell_poly[0], ocr_cell_poly[3]], 
+                            ], ocr_result, 1.0]
+                            if j not in cell_box_det_map:
+                                cell_box_det_map[j] = [gt_box]
+                            else:
+                                cell_box_det_map[j].append(gt_box)
+                            ocr_results.append(gt_box)
+                    if findtext:
+                        break
+                    else:
+                        findtext = True #只重试一次
+                        ocr_cell_polys[j] = None
+
                     
 
                     
