@@ -292,19 +292,19 @@ class mywired(WiredTableRecognition):
                                     lasti = i
                             midx = int((x1 + x2) / 2)
                             bg_ratio = 0.1
-                            while x1 < midx - avg_text_height:
-                                ratio = compute_ratio(img_blur[y1:y2+1, x1:x1+1], color_min, color_max)
-                                if ratio < text_ratio * bg_ratio or ratio > 0.95:
-                                    x1 += 1
-                                    print("add")
-                                else:
-                                    break
-                            while x2 > midx + avg_text_height:
-                                ratio = compute_ratio(img_blur[y1:y2+1, x2:x2+1], color_min, color_max)
-                                if ratio < text_ratio * bg_ratio or ratio > 0.95:
-                                    x2 -= 1
-                                else:
-                                    break
+                            # while x1 < midx - avg_text_height:
+                            #     ratio = compute_ratio(img_blur[y1:y2+1, x1:x1+1], color_min, color_max)
+                            #     if ratio < text_ratio * bg_ratio or ratio > 0.95:
+                            #         x1 += 1
+                            #         print("add")
+                            #     else:
+                            #         break
+                            # while x2 > midx + avg_text_height:
+                            #     ratio = compute_ratio(img_blur[y1:y2+1, x2:x2+1], color_min, color_max)
+                            #     if ratio < text_ratio * bg_ratio or ratio > 0.95:
+                            #         x2 -= 1
+                            #     else:
+                            #         break
                             # print(modeltest.ocr_recognition(img[y1:y2+2, x1:x2+2])['text'][0].strip())
                             ocr_cell_polys[j][k] = [x1, y1, x2, y2]
                     for ocr_cell_poly in ocr_cell_polys[j]:
